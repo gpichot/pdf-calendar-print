@@ -29,6 +29,7 @@ type PublicHoliday = {
   launchYear: number | null;
   type: string;
 };
+type WeekDayNumber = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 function isPublicHoliday(day: Date, publicHolidays: PublicHoliday[]) {
   return publicHolidays.some((holiday) => {
@@ -43,7 +44,7 @@ function MonthCalendar({
 }: {
   month: Date;
   publicHolidays: PublicHoliday[];
-  weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6;
+  weekStartsOn: WeekDayNumber;
 }) {
   const monthInterval = { start: startOfMonth(month), end: endOfMonth(month) };
   return (
@@ -136,10 +137,16 @@ function usePublicHolidays(years: number[]) {
   return publicHolidays;
 }
 
+function converToWeekDayNumber(weekStartsOn: string): WeekDayNumber {
+  const n = Number(weekStartsOn);
+  if (n >= 0 && n <= 6) return n as WeekDayNumber;
+  return 1;
+}
+
 function App() {
   const [startDate, setStartDate] = useState(new Date());
   const [countryCode, setCountryCode] = useState("FR");
-  const [weekStartsOn, setWeekStartsOn] = useState(1);
+  const [weekStartsOn, setWeekStartsOn] = useState<WeekDayNumber>(1);
   const interval = { start: startDate, end: addMonths(startDate, 11) };
 
   const months = eachMonthOfInterval(interval);
@@ -178,7 +185,9 @@ function App() {
           <select
             id="weekStartsOn"
             value={weekStartsOn}
-            onChange={(e) => setWeekStartsOn(Number(e.target.value))}
+            onChange={(e) =>
+              setWeekStartsOn(converToWeekDayNumber(e.target.value))
+            }
           >
             <option value={0}>Sunday</option>
             <option value={1}>Monday</option>
@@ -206,7 +215,7 @@ function App() {
           <p key={holiday.date}>
             {format(new Date(holiday.date), "yyyy MMM dd")} -{" "}
             {holiday.localName}
-            {holiday.counties?.length > 0 && (
+            {holiday.counties && holiday.counties.length > 0 && (
               <span className={styles.counties}>
                 {" "}
                 ({holiday.counties.join(", ")})

@@ -13,6 +13,7 @@
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
   width: 21cm;
+  margin: 0 auto;
 }
 
 /* For print */
@@ -39,7 +40,7 @@ a:hover {
 }
 
 body {
-  margin: 0;
+  margin: 0 auto;
   min-width: 320px;
   min-height: 100vh;
 }

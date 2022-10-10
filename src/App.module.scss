@@ -61,3 +61,30 @@
 .publicHolidaysTitle {
   font-size: 1.3rem;
 }
+
+.form {
+  display: flex;
+  flex-flow: row;
+  justify-content: center;
+  background-color: #f2f2f2;
+  padding: 1rem;
+
+  @media print {
+    display: none;
+  }
+}
+
+.counties {
+  color: #333333bb;
+}
+
+.formGroup {
+  display: flex;
+  flex-flow: column;
+  margin: 0.5rem;
+
+  label {
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+}

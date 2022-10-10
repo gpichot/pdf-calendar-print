@@ -9,7 +9,7 @@
     "build-storybook": "build-storybook",
     "build:scss:types": "typed-scss-modules src",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d build",
+    "deploy": "gh-pages -d dist",
     "dev": "vite",
     "format": "prettier --write src",
     "lint": "eslint src --ext .js,.jsx,.ts,.tsx",

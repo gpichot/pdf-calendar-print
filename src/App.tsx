@@ -89,6 +89,7 @@ function App() {
   return (
     <>
       <div className={styles.form}>
+        <p>Customize your calendar and then print it using your browser.</p>
         <div className={styles.languageSelector}>
           <button
             disabled={lang === "en"}

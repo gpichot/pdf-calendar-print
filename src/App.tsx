@@ -137,13 +137,11 @@ function App() {
               value={weekStartsOn}
               onChange={handleWeekStartsOnChange}
             >
-              <option value={0}>Sunday</option>
-              <option value={1}>Monday</option>
-              <option value={2}>Tuesday</option>
-              <option value={3}>Wednesday</option>
-              <option value={4}>Thursday</option>
-              <option value={5}>Friday</option>
-              <option value={6}>Saturday</option>
+              {Array.from({ length: 7 }, (_, i) => i).map((n) => (
+                <option key={n} value={n}>
+                  {t(`weekDays.${n}`)}
+                </option>
+              ))}
             </select>
           </div>
         </div>

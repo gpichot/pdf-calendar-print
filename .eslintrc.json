@@ -23,7 +23,7 @@
     "react/react-in-jsx-scope": "off",
     "import/first": "error",
     "import/newline-after-import": "error",
-    "import/no-duplicates": "error",
+    "import/no-duplicates": "off",
     "import/no-named-as-default-member": "off",
     "react/jsx-sort-props": [
       "warn",

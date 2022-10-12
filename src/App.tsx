@@ -1,141 +1,22 @@
-import React, { useEffect, useState } from "react";
-import classnames from "classnames";
+import React from "react";
+import { useTranslation } from "react-i18next";
+import { countries } from "countries-list";
 import {
   addMonths,
-  eachDayOfInterval,
   eachMonthOfInterval,
-  eachWeekOfInterval,
   eachYearOfInterval,
   endOfMonth,
-  endOfWeek,
-  format,
   isWithinInterval,
-  startOfMonth,
-  startOfWeek,
 } from "date-fns";
+
+import MonthCalendar from "./components/MonthCalendar";
+import usePublicHolidays from "./hooks/usePublicHolidays";
+import useQueryParams from "./hooks/useQueryParams";
+import i18next, { useDateFormatting } from "./i18next";
+import { WeekDayNumber } from "./types";
 
 import "./globals.scss";
 import styles from "./App.module.scss";
-
-// This print all the months between the first and last month in JSX
-type PublicHoliday = {
-  date: string;
-  localName: string;
-  name: string;
-  countryCode: string;
-  fixed: boolean;
-  global: boolean;
-  counties: null | string[];
-  launchYear: number | null;
-  type: string;
-};
-type WeekDayNumber = 0 | 1 | 2 | 3 | 4 | 5 | 6;
-
-function isPublicHoliday(day: Date, publicHolidays: PublicHoliday[]) {
-  return publicHolidays.some((holiday) => {
-    return format(day, "yyyy-MM-dd") === holiday.date;
-  });
-}
-
-function MonthCalendar({
-  month,
-  publicHolidays,
-  weekStartsOn,
-}: {
-  month: Date;
-  publicHolidays: PublicHoliday[];
-  weekStartsOn: WeekDayNumber;
-}) {
-  const monthInterval = { start: startOfMonth(month), end: endOfMonth(month) };
-  return (
-    <div>
-      {/* week days */}
-      <table className={styles.monthCalendar}>
-        <thead>
-          <tr>
-            <th></th>
-            <th colSpan={7} className={styles.monthCalendarTitle}>
-              {format(month, "MMM yyyy")}
-            </th>
-          </tr>
-          <tr>
-            <th></th>
-            {eachDayOfInterval({
-              start: startOfWeek(monthInterval.start, { weekStartsOn }),
-              end: endOfWeek(monthInterval.start, { weekStartsOn }),
-            }).map((day) => (
-              <th key={day.toISOString()}>{format(day, "E").slice(0, 2)}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {eachWeekOfInterval(monthInterval, { weekStartsOn }).map((week) => {
-            const weekInterval = {
-              start: week,
-              end: endOfWeek(week, { weekStartsOn }),
-            };
-            return (
-              <tr key={format(week, "ww")}>
-                <td className={styles.weekNumber}>{format(week, "ww")}</td>
-                {eachDayOfInterval(weekInterval).map((day) => {
-                  const disabled = day.getMonth() !== month.getMonth();
-                  const publicHoliday = isPublicHoliday(day, publicHolidays);
-                  const isWeekend = day.getDay() === 0 || day.getDay() === 6;
-                  return (
-                    <td
-                      key={format(day, "yyyy-MM-dd")}
-                      className={classnames(styles.day, {
-                        [styles.disabled]: disabled,
-                        [styles.weekend]: isWeekend,
-                        [styles.isPublicHoliday]: publicHoliday && !disabled,
-                      })}
-                    >
-                      <span className={styles.dayNumber}>
-                        {format(day, "d")}
-                      </span>
-                    </td>
-                  );
-                })}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-const PublicCalendarCache: Record<number, unknown> = {};
-
-async function fetchPublicHolidaysForYear(year: number) {
-  if (PublicCalendarCache[year]) {
-    return Promise.resolve(PublicCalendarCache[year]);
-  }
-  const response = await fetch(
-    `https://date.nager.at/api/v3/PublicHolidays/${year}/FR`
-  );
-  const json = await response.json();
-  PublicCalendarCache[year] = json;
-  return json;
-}
-
-function usePublicHolidays(years: number[]) {
-  const [publicHolidays, setPublicHolidays] = useState<PublicHoliday[]>([]);
-  const key = years.join("-");
-
-  useEffect(() => {
-    const yearsToFetch = key.split("-").map(Number);
-    const fetchPublicHolidays = async () => {
-      const publicHolidays = await Promise.all(
-        yearsToFetch.map((year) => fetchPublicHolidaysForYear(year))
-      ).then((res) => res.flat());
-      setPublicHolidays(publicHolidays);
-    };
-    fetchPublicHolidays();
-  }, [key]);
-
-  return publicHolidays;
-}
 
 function converToWeekDayNumber(weekStartsOn: string): WeekDayNumber {
   const n = Number(weekStartsOn);
@@ -143,15 +24,45 @@ function converToWeekDayNumber(weekStartsOn: string): WeekDayNumber {
   return 1;
 }
 
+const Countries = [
+  { ...countries.FR, code: "FR" },
+  { ...countries.US, code: "US" },
+  { ...countries.GB, code: "GB" },
+];
+
+const Defaults = {
+  lang: "en",
+  startDate: new Date().toISOString(),
+  weekStartsOn: "1",
+  countryCode: "FR",
+};
+
 function App() {
-  const [startDate, setStartDate] = useState(new Date());
-  const [countryCode, setCountryCode] = useState("FR");
-  const [weekStartsOn, setWeekStartsOn] = useState<WeekDayNumber>(1);
-  const interval = { start: startDate, end: addMonths(startDate, 11) };
+  const { t } = useTranslation();
+  const [queryParams, setQueryParam] = useQueryParams({
+    defaults: Defaults,
+  });
+
+  const lang = queryParams.lang;
+
+  React.useEffect(() => {
+    i18next.changeLanguage(lang || "en");
+  }, [lang]);
+
+  const startDate = queryParams.startDate
+    ? new Date(queryParams.startDate)
+    : new Date();
+  const weekStartsOn = converToWeekDayNumber(queryParams.weekStartsOn || "1");
+  const countryCode = queryParams.countryCode;
+
+  const interval = {
+    start: startDate,
+    end: endOfMonth(addMonths(startDate, 11)),
+  };
 
   const months = eachMonthOfInterval(interval);
   const years = eachYearOfInterval(interval).map((x) => x.getFullYear());
-  const publicHolidays = usePublicHolidays(years);
+  const publicHolidays = usePublicHolidays(years, { countryCode });
 
   const publicHolidaysInInterval = publicHolidays.filter((holiday) => {
     return (
@@ -159,44 +70,81 @@ function App() {
       holiday.counties === null
     );
   });
+
+  const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setQueryParam("startDate", format(new Date(e.target.value), "yyyy-MM-dd"));
+  };
+
+  const handleWeekStartsOnChange = (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    setQueryParam("weekStartsOn", e.target.value);
+  };
+
+  const handleCountryCodeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setQueryParam("countryCode", e.target.value);
+  };
+  const { format } = useDateFormatting();
+
   return (
     <>
       <div className={styles.form}>
-        <div className={styles.formGroup}>
-          <label htmlFor="startDate">Start date</label>
-          <input
-            type="date"
-            id="startDate"
-            value={format(startDate, "yyyy-MM-dd")}
-            onChange={(e) => setStartDate(new Date(e.target.value))}
-          />
-        </div>
-        <div className={styles.formGroup}>
-          <label htmlFor="countryCode">Country code</label>
-          <input
-            type="text"
-            id="countryCode"
-            value={countryCode}
-            onChange={(e) => setCountryCode(e.target.value)}
-          />
-        </div>
-        <div className={styles.formGroup}>
-          <label htmlFor="weekStartsOn">Week starts on</label>
-          <select
-            id="weekStartsOn"
-            value={weekStartsOn}
-            onChange={(e) =>
-              setWeekStartsOn(converToWeekDayNumber(e.target.value))
-            }
+        <div className={styles.languageSelector}>
+          <button
+            disabled={lang === "en"}
+            onClick={() => setQueryParam("lang", "en")}
           >
-            <option value={0}>Sunday</option>
-            <option value={1}>Monday</option>
-            <option value={2}>Tuesday</option>
-            <option value={3}>Wednesday</option>
-            <option value={4}>Thursday</option>
-            <option value={5}>Friday</option>
-            <option value={6}>Saturday</option>
-          </select>
+            🇬🇧
+          </button>
+          <button
+            disabled={lang === "fr"}
+            onClick={() => setQueryParam("lang", "fr")}
+          >
+            🇫🇷
+          </button>
+        </div>
+        <div className={styles.options}>
+          <div className={styles.formGroup}>
+            <label htmlFor="startDate">{t("fields.startDate")}</label>
+            <input
+              type="date"
+              id="startDate"
+              value={format(startDate, "yyyy-MM-dd")}
+              onChange={handleStartDateChange}
+            />
+          </div>
+          <div className={styles.formGroup}>
+            <label htmlFor="countryCode">
+              {t("fields.countryCodeForPublicHolidays")}
+            </label>
+            <select
+              id="countryCode"
+              value={countryCode}
+              onChange={handleCountryCodeChange}
+            >
+              {Countries.map((country) => (
+                <option key={country.name} value={country.code}>
+                  {country.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className={styles.formGroup}>
+            <label htmlFor="weekStartsOn">{t("fields.weeksStartOn")}</label>
+            <select
+              id="weekStartsOn"
+              value={weekStartsOn}
+              onChange={handleWeekStartsOnChange}
+            >
+              <option value={0}>Sunday</option>
+              <option value={1}>Monday</option>
+              <option value={2}>Tuesday</option>
+              <option value={3}>Wednesday</option>
+              <option value={4}>Thursday</option>
+              <option value={5}>Friday</option>
+              <option value={6}>Saturday</option>
+            </select>
+          </div>
         </div>
       </div>
       <div className={styles.gridCalendar}>
@@ -209,7 +157,7 @@ function App() {
           />
         ))}
       </div>
-      <h2 className={styles.publicHolidaysTitle}>Public Holidays</h2>
+      <h2 className={styles.publicHolidaysTitle}>{t("publicHolidays")}</h2>
       <div className={styles.publicHolidays}>
         {publicHolidaysInInterval.map((holiday) => (
           <p key={holiday.date}>
